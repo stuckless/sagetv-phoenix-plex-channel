@@ -1,0 +1,27 @@
+[
+    {
+        "id": "server",
+        "type": "text",
+        "label": "Server",
+        "default": "192.168.1.10"
+    },
+    {
+        "id": "port",
+        "type": "text",
+        "label": "Port",
+        "default": "8080"
+    },
+    {
+        "id": "username",
+        "type": "text",
+        "label": "Username",
+        "default": "sage"
+    },
+    {
+        "id": "password",
+        "type": "text",
+        "label": "Password",
+        "default": "frey",
+        "option": "hidden"
+    }
+]
