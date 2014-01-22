@@ -13,4 +13,4 @@ Latest Phoenix Core plugin
 Latest Sagex APIs plugin (may need to manually download and install this from https://github.com/stuckless/sagetv-sagex-api/releases)
 
 # Pictures
-https://plus.google.com/photos/10159...Nz7jdDR8o3HiwE
+https://plus.google.com/photos/101598841452026913121/albums/5970615206594113041
