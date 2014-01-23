@@ -75,9 +75,12 @@ def ValidatePrefs():
 def MainMenu():
     dir=ObjectContainer()
 
-    menus = LoadMenuFromServer()
-    for menu in menus:
-        dir.add(DirectoryObject(key=Callback(GetView, viewName=sagex.jsonval(menu, 'view'), title=sagex.jsonval(menu, 'title')), title=sagex.jsonval(menu, 'title')))
+    try:
+        menus = LoadMenuFromServer()
+        for menu in menus:
+            dir.add(DirectoryObject(key=Callback(GetView, viewName=sagex.jsonval(menu, 'view'), title=sagex.jsonval(menu, 'title')), title=sagex.jsonval(menu, 'title')))
+    except:
+        Log('Possible server communication problems')
 
     dir.add(PrefsObject(title="Preferences", summary="Configure how to connect to the SageTV backend", thumb=R("icon-prefs.png")))
     return dir

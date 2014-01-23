@@ -333,6 +333,6 @@ def PlayVideo(url):
 
 
 def IsTV(md):
-    return 'TV' == jsonval(md, 'MediaFile.MediaFileMetadataProperties.MediaType')
+    return 'TV' == jsonval(md, 'MediaFile.MediaFileMetadataProperties.MediaType') or jsonval(md, 'MediaFile.IsTVFile') is True
 
 
