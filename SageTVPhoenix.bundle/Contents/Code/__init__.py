@@ -231,16 +231,20 @@ def NewPhoenixMediaObject(media):
 
     if isTV:
         o = EpisodeObject()
-        o.title = media['episodeName']
-        o.show = media['title']
-        o.season = media['season']
-        o.index = media['episode']
+        o.title = sagex.jsonval(media,'episodeName')
+        o.show = sagex.jsonval(media,'title')
+        o.season = sagex.jsonval(media,'season')
+        o.index = sagex.jsonval(media,'episode')
+        if o.season > 0:
+            o.title = ("%s (%sx%s)" % (sagex.jsonval(media, 'episodeName'), str(o.season), str(o.index)))
         o.summary = sagex.jsonval(media,'description')
     else:
         o = VideoClipObject()
         o.title = sagex.jsonval(media, 'title')
         o.summary = sagex.jsonval(media,'description')
         o.year = sagex.jsonval(media, 'year')
+        if o.year > 0:
+            o.title = "%s (%s)" % (sagex.jsonval(media, 'title'), str(o.year))
 
     if o.title is None:
         Log(media)
