@@ -11,6 +11,7 @@ The API of a Plex Channel is really limiting, so, it will not enable you to sche
 
 # Installation
 Download the latest release from the releases area
+https://github.com/stuckless/sagetv-phoenix-plex-channel/releases
 
 Extract it and copy the SageTVPhoenix.bundle folder to the Library/Application Support/Plex Media Server/Plug-ins/ folder
 
