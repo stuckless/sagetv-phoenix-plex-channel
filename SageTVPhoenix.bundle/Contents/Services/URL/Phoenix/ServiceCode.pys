@@ -327,7 +327,8 @@ def MediaObjectsForURL(url):
 def PlayVideo(url):
     Log("Phoenix: PlayVideo(): " + url)
     regx = RE_VIDEO_URL.search(url);
-    video_url = SAGEX_URL() + "/media/mediafile/" + regx.group(2) + "/" + regx.group(2) + ".debug.m3u8"
+    # video_url = SAGEX_URL() + "/media/mediafile/" + regx.group(2) + "/" + regx.group(2) + ".debug.m3u8?segment=10"
+    video_url = SAGEX_URL() + "/media/mediafile/" + regx.group(2)
     Log("Phoenix: PlayVideo(): Real Url: " + video_url)
     return Redirect(video_url)
 
