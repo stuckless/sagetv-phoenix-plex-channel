@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project basedir="." default="package" name="SageTVPlexChannel">
+    <property name="target" value="${basedir}/target/"/>
+    <property name="bundleName" value="SageTVPhoenix"/>
+    <property name="bundleSource" value="${bundleName}.bundle"/>
+    <property name="bundleZip" value="${bundleName}.zip"/>
+
+    <target name="package" depends="">
+        <mkdir dir="${target}" />
+        <zip file="${target}/${bundleZip}" update="false">
+            <zipfileset prefix="${bundleSource}" dir="${bundleSource}" includes="**/**" excludes="**/*.iml"/>
+        </zip>
+    </target>
+</project>
