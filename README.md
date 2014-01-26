@@ -20,8 +20,7 @@ Restart Plex Media Server
 You should see a new channel for Phoenix.  You will want to launch the channel, and then use the Preferences for that plugin to set the sagetv server, port, username and password.  IF your plex server is running on the same server as your SageTV server, then use 'localhost' for the server.
 
 # Requirements
-Latest Phoenix Core plugin
-Latest Sagex APIs plugin (may need to manually download and install this from https://github.com/stuckless/sagetv-sagex-api/releases) (at least version 7.1.9.23)
+Latest Phoenix Core plugin (7.1.9.23 min)
 
 # Gallery
 https://plus.google.com/photos/101598841452026913121/albums/5970615206594113041
