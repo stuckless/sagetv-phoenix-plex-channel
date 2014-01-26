@@ -24,3 +24,8 @@ Latest Phoenix Core plugin and the Latest Sagex API plugin (7.1.9.23 minimum)
 
 # Gallery
 https://plus.google.com/photos/101598841452026913121/albums/5970615206594113041
+
+# Discussions
+Head over the SageTV formums if you want to discuss this
+http://forums.sagetv.com/forums/showthread.php?p=561549
+
