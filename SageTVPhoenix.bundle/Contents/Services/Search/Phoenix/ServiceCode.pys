@@ -203,3 +203,101 @@ def GetStreamUrl(media):
 def GetAiringUrl(media):
     return "stvphoenix://airing/" + media['id']
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def Search(query):
+    # http://192.168.1.10:8080/sagex/phoenix?c=phoenix.umb.Search&1=Iron&2=MediaFiles&3=null:
+
+    try:
+        json = PhoenixAPI('phoenix.umb.Search', [query, 'MediaFiles', 'null:'], end=50)
+    except:
+        Log("View returned an error: " + query);
+        json = None
+
+
+    if (json == None):
+        return ObjectContainer(header='Nothing Found', message='No search results for ' + query)
+
+    dir = ObjectContainer(title1='Phoenix', title2='Media Files for ' + query)
+
+    if 'children' in json:
+        for video in json['children']:
+            dir.add(NewPhoenixMediaObject(video))
+
+    dir.art=GetBackground(FindSageID(json))
+
+    if len(dir)<1:
+        return ObjectContainer(header='Nothing Found', message='No search results for ' + query)
+
+    return dir
+
+#TODO: There has to be a way to share code with services
+def NewPhoenixMediaObject(media):
+    if 'isTV' in media:
+        isTV = media['isTV']
+    else:
+        isTV = False
+
+    if isTV:
+        o = EpisodeObject()
+        o.title = jsonval(media,'episodeName')
+        o.show = jsonval(media,'title')
+        o.season = jsonval(media,'season')
+        o.index = jsonval(media,'episode')
+        if o.season > 0:
+            o.title = ("%s (%sx%s)" % (jsonval(media, 'episodeName'), str(o.season), str(o.index)))
+        o.summary = jsonval(media,'description')
+    else:
+        o = VideoClipObject()
+        o.title = jsonval(media, 'title')
+        o.summary = jsonval(media,'description')
+        o.year = jsonval(media, 'year')
+        if o.year > 0:
+            o.title = "%s (%s)" % (jsonval(media, 'title'), str(o.year))
+
+    if o.title is None:
+        Log(media)
+
+    o.url = GetStreamUrl(media)
+    o.thumb = GetThumb(media)
+    o.duration = jsonval(media, "runtime")
+
+    try:
+        o.originally_available_at = Datetime.FromTimestamp((jsonval(media, "airingTime")) / 1000)
+    except:
+        pass
+
+    return o

@@ -7,10 +7,43 @@ NAME = L('Title')
 ART  = 'art-default.jpg'
 ICON = 'icon.png'
 
+VERSION="1.0.1-beta"
+
 DEFAULT_MENU = [
     {
-        'title':'Unwatched TV',
-        'view':'phoenix.view.default.TV.unwatched'
+        'title':'TV Shows',
+        'view':'phoenix.view.default.TV',
+        'items': 100
+    },
+    {
+        'title':'Recent Recordings',
+        'view':'phoenix.view.util.recentrecordings',
+        'items': 50
+    },
+    {
+        'title':'Recent Imports',
+        'view':'phoenix.view.util.recentimports',
+        'items': 50
+    },
+    {
+        'title':'Upcomming Movies',
+        'view':'phoenix.view.default.upcomingmovies',
+        'items': 50
+    },
+    {
+        'title':'Home Videos',
+        'view':'phoenix.view.default.homevideos',
+        'items': 50
+    },
+    {
+        'title':'All Movies',
+        'view':'phoenix.view.default.allMovies',
+        'items': 50
+    },
+    {
+        'title':'Video Folders',
+        'view':'phoenix.view.default.videofolders',
+        'items': 50
     },
     {
         'title':'Recording Schedule (Grouped by Date)',
@@ -71,19 +104,38 @@ def ValidatePrefs():
 
 
 # This main function will setup the displayed items.
-@handler(VIDEO_PREFIX,'Phoenix', art=ART, thumb=ICON)
+@handler(VIDEO_PREFIX, 'Phoenix', art=ART, thumb=ICON)
 def MainMenu():
-    dir=ObjectContainer()
+    dir=ObjectContainer(title1="Phoenix")
 
     try:
         menus = LoadMenuFromServer()
         for menu in menus:
-            dir.add(DirectoryObject(key=Callback(GetView, viewName=sagex.jsonval(menu, 'view'), title=sagex.jsonval(menu, 'title')), title=sagex.jsonval(menu, 'title')))
+            item = DirectoryObject(
+                key=Callback(GetView,
+                             viewName=sagex.jsonval(menu, 'view'),
+                             title=sagex.jsonval(menu, 'title'),
+                             end=sagex.jsonval(menu, 'items', -1)),
+                title=sagex.jsonval(menu, 'title'),
+                thumb=R('movies.png')
+            )
+            dir.add(item)
     except:
         Log('Possible server communication problems')
 
+    #if Client.Product != 'PlexConnect':
+    dir.add(SearchDirectoryObject(identifier='com.plexapp.plugins.sagexphoenix', title='Search SageTV', prompt='Search for SageTV Media Files', term='SageTV'))
+
     dir.add(PrefsObject(title="Preferences", summary="Configure how to connect to the SageTV backend", thumb=R("icon-prefs.png")))
+
+    dir.add(DirectoryObject(key=Callback(About), title='About', thumb=R('info.png')));
+
     return dir
+
+
+@route(VIDEO_PREFIX + '/about')
+def About():
+    return MessageContainer(header='About Phoenix', message='Phoenix Plex Plugin Version ' + VERSION)
 
 
 def LoadMenuFromServer(menuname='userdata/Phoenix/Menus/plexmenu.json'):
@@ -100,9 +152,13 @@ def LoadMenuFromServer(menuname='userdata/Phoenix/Menus/plexmenu.json'):
 
     return None
 
-@route(VIDEO_PREFIX + '/vfs/getview', allow_sync=True)
-def GetView(viewName, title):
-    videos = sagex.PhoenixAPI('phoenix.umb.CreateView', [viewName])
+@route(VIDEO_PREFIX + '/vfs/getview/{viewName}/{start}/{end}', allow_sync=True)
+def GetView(viewName, title, start=0, end=-1):
+    try:
+        videos = sagex.PhoenixAPI('phoenix.umb.CreateView', [viewName], start, end)
+    except:
+        Log("View returned an error: " + viewName);
+        videos = None
 
     if videos is None:
         return ObjectContainer(header='No Files', message='No files for the given view ' + title)
@@ -113,11 +169,9 @@ def GetView(viewName, title):
 
     Dict[viewName] = videos
 
-    Log('Processing Videos: viewName=' + viewName + "; title=" + title)
+    Log('Processing Videos: viewName=' + viewName + "; title=" + title + "; start: " + str(start) + "; end: " + str(end))
 
-
-
-    dir = ProcessChildren(title, viewName, Dict[viewName]['title'])
+    dir = ProcessChildren(title, viewName, path=Dict[viewName]['title'])
 
     if dir is None or len(dir) < 1:
         return ObjectContainer(header='No Data for View', message='Unable to load the view ' + viewName)
