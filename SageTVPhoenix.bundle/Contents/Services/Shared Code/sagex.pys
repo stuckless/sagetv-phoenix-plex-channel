@@ -24,7 +24,7 @@ def jsonval(o, expr, defval=None):
 
 
 def GetThumb(mediafile):
-    return GetFanart(mediafile, 'poster', '300')
+    return GetFanart(mediafile, 'poster', '600')
 
 def GetBackground(mediafile):
     return GetFanart(mediafile, 'background')
@@ -93,7 +93,13 @@ def SageAPI(cmd, args):
     headers["Authorization"] = "Basic " + (base64.encodestring(Prefs['username'] + ":" + Prefs['password']))
 
     url = SAGEX_URL() + "/api?" + urllib.urlencode(values)
-    reply = JSON.ObjectFromURL(url=url, headers=headers)
+
+    try:
+        reply = JSON.ObjectFromURL(url=url, headers=headers)
+    except Exception as e:
+        Log('Failed while calling SageAPI ' + url);
+        Log(str(e))
+
     if 'Result' in reply:
         return reply['Result']
     else:
@@ -120,7 +126,12 @@ def PhoenixAPI(cmd, args=None, start=0, end=-1):
     headers["Authorization"] = "Basic " + (base64.encodestring(Prefs['username'] + ":" + Prefs['password']))
 
     url = SAGEX_URL() + "/phoenix?" + urllib.urlencode(values)
-    reply = JSON.ObjectFromURL(url=url, headers=headers)
+    try:
+        reply = JSON.ObjectFromURL(url=url, headers=headers)
+    except Exception as e:
+        Log('Failed to Call JSON URL: ' + url)
+        Log(str(e))
+
     if 'reply' in reply:
         return reply['reply']
     else:
@@ -203,3 +214,78 @@ def GetStreamUrl(media):
 def GetAiringUrl(media):
     return "stvphoenix://airing/" + media['id']
 
+
+def PhoenixObject(media):
+    if IsAirings(media):
+        return PhoenixAiringObject(media)
+    else:
+        return PhoenixMediaObject(media)
+
+
+def PhoenixAiringObject(media):
+    o = EpisodeObject()
+    aired = Datetime.FromTimestamp((jsonval(media, "airingTime")) / 1000)
+    o.title = jsonval(media, 'title') + " - " + jsonval(media, 'episodeName') + " - " + aired.strftime("%a %I:%M %p")
+    o.show = jsonval(media, 'title')
+    o.season = jsonval(media, 'season')
+    o.index = jsonval(media, 'episode')
+    desc = aired.strftime("%a, %b %d at %I:%M %p\n") + jsonval(media, 'description')
+    o.summary = desc
+    o.duration = jsonval(media, "runtime")
+    o.originally_available_at = aired
+    o.thumb = GetFanartFor(mediafile=media, artifact='poster', mediatype='tv')
+    o.url = GetAiringUrl(media)
+    return o
+
+
+def PhoenixMediaObject(media):
+    if 'isTV' in media:
+        isTV = media['isTV']
+    else:
+        isTV = False
+
+    if isTV:
+        o = EpisodeObject()
+        o.title = jsonval(media,'episodeName')
+        o.show = jsonval(media,'title')
+        o.season = jsonval(media,'season')
+        o.index = jsonval(media,'episode')
+        if o.season > 0:
+            o.title = ("%s (%sx%s)" % (jsonval(media, 'episodeName'), str(o.season), str(o.index)))
+        o.summary = jsonval(media,'description')
+    else:
+        o = VideoClipObject()
+        o.title = jsonval(media, 'title')
+        o.summary = jsonval(media,'description')
+        o.year = jsonval(media, 'year')
+        if o.year > 0:
+            o.title = "%s (%s)" % (jsonval(media, 'title'), str(o.year))
+
+    if o.title is None:
+        Log(media)
+
+    o.url = GetStreamUrl(media)
+    o.thumb = GetThumb(media)
+    o.duration = jsonval(media, "runtime")
+
+    try:
+        o.originally_available_at = Datetime.FromTimestamp((jsonval(media, "airingTime")) / 1000)
+    except:
+        pass
+
+    return o
+
+def RoleList(json, role='Actor'):
+    people = jsonval(json, "PeopleListInShow")
+    roles = jsonval(json, "RolesInShow")
+
+    if people is None:
+        return []
+
+    retRoles = []
+    n = len(people)
+    for x in range(0, n):
+        if roles[x] == role:
+            retRoles.append(people[x])
+
+    return retRoles

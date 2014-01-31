@@ -1,231 +1,4 @@
-import base64
-import urllib
-
-
-def SAGEX_URL():
-    return "http://%s:%s/sagex" % (Prefs['server'], Prefs['port'])
-
-# given 'object.child' it will traverse the object hierarchy for the item
-def jsonval(o, expr, defval=None):
-    if (o == None):
-        Log('Passed Null Object for ' + expr);
-        return defval
-
-    parts = expr.split(".")
-    for s in parts:
-        if (s in o):
-            o = o[s]
-        else:
-            Log("val(): Object doesn't have " + expr + "; (failed on " + s + ")")
-            o = defval
-            break
-
-    return o
-
-
-def GetThumb(mediafile):
-    return GetFanart(mediafile, 'poster', '300')
-
-def GetBackground(mediafile):
-    return GetFanart(mediafile, 'background')
-
-def GetFanart(mediafile, artifact, scalex=None):
-    if isinstance(mediafile, dict):
-        fid = mediafile['id']
-    else:
-        fid = mediafile
-
-    values = {}
-    values['tag'] = 'plexphoenix'
-    values['mediafile'] = fid
-
-    if not scalex == None:
-        values['scalex'] = scalex
-
-    url = SAGEX_URL() + "/media/"+artifact+"?" + urllib.urlencode(values)
-    return url
-
-def GetFanartFor(mediafile, mediatype, artifact, title=None, season=None, scalex=None):
-    values = {}
-    if isinstance(mediafile, dict):
-        if title is None and 'title' in mediafile:
-            title = mediafile['title']
-
-        if season is None and 'season' in mediafile:
-            season = mediafile['season']
-
-        if not 'isEPG' in mediafile:
-            values['mediafile'] = mediafile['id']
-    else:
-        if mediafile is not None:
-            values['mediafile'] = mediafile
-
-    values['tag'] = 'plexphoenix'
-    values['usedefault'] = 'true'
-    values['title'] = title
-    values['defaulttitle'] = title
-    values['artifact'] = artifact
-    values['mediatype'] = mediatype
-
-    if not scalex == None:
-        values['scalex'] = scalex
-
-    url = SAGEX_URL() + "/media/fanart?" + urllib.urlencode(values)
-
-    Log("FANART URL: " + url)
-
-    return url
-
-
-def SageAPI(cmd, args):
-    # add in command args
-    values = {}
-    values['c'] = cmd
-    values['encoder'] = 'json'
-    if not args == None:
-        i = 1
-        for arg in args:
-            values[str(i)] = arg
-            i += 1
-
-    # Request the URL with authentication
-    headers = {}
-    headers["Authorization"] = "Basic " + (base64.encodestring(Prefs['username'] + ":" + Prefs['password']))
-
-    url = SAGEX_URL() + "/api?" + urllib.urlencode(values)
-    reply = JSON.ObjectFromURL(url=url, headers=headers)
-    if 'Result' in reply:
-        return reply['Result']
-    else:
-        return reply
-
-
-def PhoenixAPI(cmd, args):
-    # add in command args
-    values = {}
-    values['c'] = cmd
-    if not args == None:
-        i = 1
-        for arg in args:
-            values[str(i)] = arg
-            i += 1
-
-    # Request the URL with authentication
-    headers = {}
-    headers["Authorization"] = "Basic " + (base64.encodestring(Prefs['username'] + ":" + Prefs['password']))
-
-    url = SAGEX_URL() + "/phoenix?" + urllib.urlencode(values)
-    reply = JSON.ObjectFromURL(url=url, headers=headers)
-    if 'reply' in reply:
-        return reply['reply']
-    else:
-        return reply
-
-
-## VFS Specific APIS
-def FindSageID(json):
-    if 'children' in json:
-        return FindSageIDInChildren(json['children'])
-    else:
-        if 'id' in json:
-            return json['id']
-        else:
-            return None
-
-def FindSageIDInChildren(children):
-    for child in children:
-        sid = FindSageID(child)
-        if not sid is None:
-            return sid
-
-    return None
-
-
-def FindFirstChild(json):
-    if isinstance(json, dict):
-        if 'children' in json:
-            return FindFirstChild(json['children'])
-        else:
-            return json
-    elif isinstance(json, list):
-        return FindFirstChild(json[0])
-    else:
-        return json
-
-
-    return None
-
-
-def IsAirings(json):
-    try:
-        return FindFirstChild(json)['isEPG']
-    except:
-        return False
-
-
-def AppendPath(path, part):
-    if path == '':
-        return part
-    else:
-        return path + "^^" + part
-
-
-def GetPath(json, path):
-    Log("GetPath: " + path)
-    if path == '' or path == jsonval(json, 'title'):
-        return json
-
-    for s in path.split('^^'):
-        Log("PATH PART: " + s)
-        if s == '':
-            continue
-
-        Log("Looking for " + s)
-        for video in json['children']:
-            if s == jsonval(video,'title'):
-                Log("Getting: " + jsonval(video, 'title'))
-                json = video
-                continue
-
-    return json
-
-
-# Misc Util Sages Methods
-def GetStreamUrl(media):
-    return "stvphoenix://mediafile/" + media['id']
-
-
-def GetAiringUrl(media):
-    return "stvphoenix://airing/" + media['id']
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+import sagex
 
 # URLS
 # stvphoenix://airing/ID
@@ -245,22 +18,24 @@ def MetadataObjectForURL(inurl):
 
 def MetadataForAiring(airing):
     Log("MetadataForAiring(): Airing: " + airing)
-    file = SageAPI('GetAiringForID', [airing])
+    file = sagex.SageAPI('GetAiringForID', [airing])
 
     if file is None:
         return ObjectContainer(message='No Airing for ' + airing, header='No Airing');
 
+
     o = EpisodeObject()
-    o.title = jsonval(file,  'Airing.Show.ShowEpisode')
-    o.show = jsonval(file, 'Airing.Show.ShowTitle')
-    o.season = int(jsonval(file, 'Airing.Show.ShowSeasonNumber'))
-    o.index = int(jsonval(file, 'Airing.Show.ShowEpisodeNumber'))
-    o.summary = jsonval(file, "Airing.Show.ShowDescription")
-    o.duration = jsonval(file, "Airing.ScheduleDuration")
-    o.originally_available_at = Datetime.FromTimestamp((jsonval(file, "Airing.ScheduleStartTime")) / 1000)
-    o.thumb = GetFanartFor(mediafile=None, artifact='poster', mediatype='tv', title=o.show, season=o.season)
-    o.art = GetFanartFor(mediafile=None, artifact='background', mediatype='tv', title=o.show, season=o.season)
-    o.guest_stars = jsonval(file, "Airing.Show.PeopleAndCharacterListInShow")
+    o.title = sagex.jsonval(file,  'Airing.Show.ShowEpisode')
+    o.show = sagex.jsonval(file, 'Airing.Show.ShowTitle')
+    o.season = int(sagex.jsonval(file, 'Airing.Show.ShowSeasonNumber'))
+    o.index = int(sagex.jsonval(file, 'Airing.Show.ShowEpisodeNumber'))
+    o.summary = sagex.jsonval(file, "Airing.Show.ShowDescription")
+    o.duration = sagex.jsonval(file, "Airing.ScheduleDuration")
+    o.originally_available_at = Datetime.FromTimestamp((sagex.jsonval(file, "Airing.ScheduleStartTime")) / 1000)
+    o.thumb = sagex.GetFanartFor(mediafile=None, artifact='poster', mediatype='tv', title=o.show, season=o.season)
+    o.art = sagex.GetFanartFor(mediafile=None, artifact='background', mediatype='tv', title=o.show, season=o.season)
+    o.guest_stars = sagex.jsonval(file, "Airing.Show.PeopleAndCharacterListInShow")
+
     return o
 
 
@@ -268,7 +43,7 @@ def MetadataForMediaFile(mediafile):
     Log("MetadataForMediaFile(): MediaFile: " + mediafile)
 
     # Request the URL
-    file = SageAPI('GetMediaFileForID', [mediafile])
+    file = sagex.SageAPI('GetMediaFileForID', [mediafile])
 
     if file == None:
         Log('MetadataForMediaFile did not return a json reply for ' + mediafile);
@@ -285,28 +60,42 @@ def MetadataForMediaFile(mediafile):
     else:
         o = VideoClipObject()
 
-    md = jsonval(file, 'MediaFile.MediaFileMetadataProperties')
+    md = sagex.jsonval(file, 'MediaFile.MediaFileMetadataProperties')
 
     if isTV:
-        o.title = jsonval(md, 'EpisodeName')
-        o.show = jsonval(file, 'MediaFile.MediaTitle')
-        o.season = int(jsonval(md,'SeasonNumber'))
-        o.index = int(jsonval(md,'EpisodeNumber'))
-        o.guest_stars = jsonval(file, "MediaFile.Airing.Show.PeopleAndCharacterListInShow")
+        o.title = sagex.jsonval(md, 'EpisodeName')
+        o.show = sagex.jsonval(file, 'MediaFile.MediaTitle')
+        o.season = int(sagex.jsonval(md,'SeasonNumber'))
+        o.index = int(sagex.jsonval(md,'EpisodeNumber'))
+        o.guest_stars = sagex.RoleList(sagex.jsonval(file,"MediaFile.Airing.Show"), 'Actor')
     else:
-        o.title = jsonval(file,'MediaTitle')
-        o.year = int(jsonval(md, 'Year', defval='0'))
+        o.title = sagex.jsonval(file,'MediaFile.MediaTitle')
+        o.year = int(sagex.jsonval(md, 'Year', defval='0'))
+        if o.year > 0 and o.title is not None:
+            o.title = o.title + "(" + str(o.year) + ")"
 
-    o.summary = jsonval(md,'Description')
-    o.duration = jsonval(file, "MediaFile.Airing.ScheduleDuration")
+    o.directors = sagex.RoleList(sagex.jsonval(file, "MediaFile.Airing.Show"), 'Director')
+    o.writers = sagex.RoleList(sagex.jsonval(file, "MediaFile.Airing.Show"), 'Writer')
+    o.producers = sagex.RoleList(sagex.jsonval(file, "MediaFile.Airing.Show"), 'Producer')
+
+#    try:
+#        o.content_rating =
+
+    o.summary = sagex.jsonval(md,'Description')
+    o.duration = sagex.jsonval(file, "MediaFile.Airing.ScheduleDuration")
 
     try:
-        o.originally_available_at = Datetime.FromTimestamp((jsonval(file, "MediaFile.Airing.ScheduleStartTime")) / 1000)
+        o.rating = int(sagex.jsonval(md,'UserRating'), 0) / 10
     except:
         pass
 
-    o.thumb = GetThumb(mediafile)
-    o.art = GetBackground(mediafile)
+    try:
+        o.originally_available_at = Datetime.FromTimestamp((sagex.jsonval(file, "MediaFile.Airing.ScheduleStartTime")) / 1000)
+    except:
+        pass
+
+    o.thumb = sagex.GetThumb(mediafile)
+    o.art = sagex.GetBackground(mediafile)
     return o
 
 
@@ -328,12 +117,12 @@ def PlayVideo(url):
     Log("Phoenix: PlayVideo(): " + url)
     regx = RE_VIDEO_URL.search(url);
     # video_url = SAGEX_URL() + "/media/mediafile/" + regx.group(2) + "/" + regx.group(2) + ".debug.m3u8?segment=10"
-    video_url = SAGEX_URL() + "/media/mediafile/" + regx.group(2) + "?_debug=true"
+    video_url = sagex.SAGEX_URL() + "/media/mediafile/" + regx.group(2) + "?_debug=true"
     Log("Phoenix: PlayVideo(): Real Url: " + video_url)
     return Redirect(video_url)
 
 
 def IsTV(md):
-    return 'TV' == jsonval(md, 'MediaFile.MediaFileMetadataProperties.MediaType') or jsonval(md, 'MediaFile.IsTVFile') is True
+    return 'TV' == sagex.jsonval(md, 'MediaFile.MediaFileMetadataProperties.MediaType') or sagex.jsonval(md, 'MediaFile.IsTVFile') is True
 
 

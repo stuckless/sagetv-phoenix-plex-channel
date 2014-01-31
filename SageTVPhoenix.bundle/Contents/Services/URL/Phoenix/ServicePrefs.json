@@ -23,5 +23,11 @@
         "label": "Password",
         "default": "frey",
         "option": "hidden"
+    },
+    {
+        "id": "enable_custom_menu",
+        "type": "bool",
+        "label": "Enable Custom Menu",
+        "default": true
     }
 ]

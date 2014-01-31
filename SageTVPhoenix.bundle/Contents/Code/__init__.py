@@ -1,4 +1,19 @@
-import sagex as sagex
+# static service methods for sagex.pys
+jsonval = SharedCodeService.sagex.jsonval
+PhoenixAPI = SharedCodeService.sagex.PhoenixAPI
+SageAPI = SharedCodeService.sagex.SageAPI
+GetPath = SharedCodeService.sagex.GetPath
+IsAirings = SharedCodeService.sagex.IsAirings
+FindSageID = SharedCodeService.sagex.FindSageID
+AppendPath = SharedCodeService.sagex.AppendPath
+GetThumb = SharedCodeService.sagex.GetThumb
+GetBackground = SharedCodeService.sagex.GetBackground
+FindFirstChild = SharedCodeService.sagex.FindFirstChild
+GetFanartFor = SharedCodeService.sagex.GetFanartFor
+GetAiringUrl = SharedCodeService.sagex.GetAiringUrl
+GetStreamUrl = SharedCodeService.sagex.GetStreamUrl
+PhoenixObject = SharedCodeService.sagex.PhoenixObject
+PhoenixMediaObject = SharedCodeService.sagex.PhoenixMediaObject
 
 VIDEO_PREFIX = "/video/sagex/phoenix"
 
@@ -7,7 +22,7 @@ NAME = L('Title')
 ART  = 'art-default.jpg'
 ICON = 'icon.png'
 
-VERSION="1.0.1-beta"
+VERSION="1.0.2-beta"
 
 DEFAULT_MENU = [
     {
@@ -78,7 +93,6 @@ def Start():
 
     Dict.Reset()
 
-
 # see:
 #  http://dev.plexapp.com/docs/Functions.html#ValidatePrefs
 def ValidatePrefs():
@@ -101,8 +115,6 @@ def ValidatePrefs():
         )
 
 
-
-
 # This main function will setup the displayed items.
 @handler(VIDEO_PREFIX, 'Phoenix', art=ART, thumb=ICON)
 def MainMenu():
@@ -113,21 +125,18 @@ def MainMenu():
         for menu in menus:
             item = DirectoryObject(
                 key=Callback(GetView,
-                             viewName=sagex.jsonval(menu, 'view'),
-                             title=sagex.jsonval(menu, 'title'),
-                             end=sagex.jsonval(menu, 'items', -1)),
-                title=sagex.jsonval(menu, 'title'),
+                             viewName=jsonval(menu, 'view'),
+                             title=jsonval(menu, 'title'),
+                             end=jsonval(menu, 'items', -1)),
+                title=jsonval(menu, 'title'),
                 thumb=R('movies.png')
             )
             dir.add(item)
     except:
         Log('Possible server communication problems')
 
-    #if Client.Product != 'PlexConnect':
     dir.add(SearchDirectoryObject(identifier='com.plexapp.plugins.sagexphoenix', title='Search SageTV', prompt='Search for SageTV Media Files', term='SageTV'))
-
     dir.add(PrefsObject(title="Preferences", summary="Configure how to connect to the SageTV backend", thumb=R("icon-prefs.png")))
-
     dir.add(DirectoryObject(key=Callback(About), title='About', thumb=R('info.png')));
 
     return dir
@@ -135,11 +144,14 @@ def MainMenu():
 
 @route(VIDEO_PREFIX + '/about')
 def About():
-    return MessageContainer(header='About Phoenix', message='Phoenix Plex Plugin Version ' + VERSION)
+    return ObjectContainer(header='About Phoenix', message='Phoenix Plex Plugin Version ' + VERSION, title='About', thumb=R('info.png'))
 
 
 def LoadMenuFromServer(menuname='userdata/Phoenix/Menus/plexmenu.json'):
-    menusStr = sagex.SageAPI('GetFileAsString', [menuname])
+    if Prefs['enable_custom_menu'] is False:
+        return DEFAULT_MENU
+
+    menusStr = SageAPI('GetFileAsString', [menuname])
     if menusStr is None or menusStr == '':
         return DEFAULT_MENU
     else:
@@ -152,12 +164,13 @@ def LoadMenuFromServer(menuname='userdata/Phoenix/Menus/plexmenu.json'):
 
     return None
 
-@route(VIDEO_PREFIX + '/vfs/getview/{viewName}/{start}/{end}', allow_sync=True)
+
+@route(VIDEO_PREFIX + '/vfs/getview/{viewName}/{start}/{end}/', allow_sync=True)
 def GetView(viewName, title, start=0, end=-1):
     try:
-        videos = sagex.PhoenixAPI('phoenix.umb.CreateView', [viewName], start, end)
+        videos = PhoenixAPI('phoenix.umb.CreateView', [viewName], start, end)
     except:
-        Log("View returned an error: " + viewName);
+        Log("View returned an error: " + viewName)
         videos = None
 
     if videos is None:
@@ -174,7 +187,7 @@ def GetView(viewName, title, start=0, end=-1):
     dir = ProcessChildren(title, viewName, path=Dict[viewName]['title'])
 
     if dir is None or len(dir) < 1:
-        return ObjectContainer(header='No Data for View', message='Unable to load the view ' + viewName)
+        return ObjectContainer(header='No Media', message='No media items for view ' + viewName)
 
     return dir
 
@@ -183,12 +196,13 @@ def GetView(viewName, title, start=0, end=-1):
 def ProcessChildren(title, viewName, path):
     Log('Processing View: ' + viewName + " with path " + path)
 
-    json = sagex.GetPath(Dict[viewName], path)
+    json = GetPath(Dict[viewName], path)
 
-    if (json == None):
-        return ObjectContainer(header='No Data for View', message='Unable to load the view ' + title)
+    if json is None:
+        Log('VIEW: ' + viewName + " was empty");
+        return ObjectContainer(header='No Data for View', message='The view, ' + title + ', was empty')
 
-    if sagex.IsAirings(json):
+    if IsAirings(json):
         return ProcessAirings(title, viewName, path, json)
     else:
         return ProcessMediaItems(title, viewName, path, json)
@@ -198,23 +212,26 @@ def ProcessMediaItems(title, viewName, path, json):
     dir = ObjectContainer(title2=title, view_group='InfoList')
 
     if 'children' in json:
+        if 'title' in json:
+            dir.title1 = json['title']
+
         for video in json['children']:
             if 'children' in video:
-                sageid = sagex.FindSageID(video)
+                sageid = FindSageID(video)
                 if FOLDERS_COUNT_IN_TITLE:
                     folderTitle = video['title'] + " (" + str(len(video['children'])) + " Items)"
                 else:
                     folderTitle = video['title']
                 dir.add(
-                    DirectoryObject(key=Callback(ProcessChildren, title=title, viewName=viewName, path=sagex.AppendPath(path, video['title'])),
+                    DirectoryObject(key=Callback(ProcessChildren, title=title, viewName=viewName, path=AppendPath(path, video['title'])),
                                     title=folderTitle,
-                                    thumb=sagex.GetThumb(sageid),
-                                    art=sagex.GetBackground(sageid))
+                                    thumb=GetThumb(sageid),
+                                    art=GetBackground(sageid))
                 )
             else:
-                dir.add(NewPhoenixMediaObject(video))
+                dir.add(PhoenixMediaObject(video))
 
-    dir.art=sagex.GetBackground(sagex.FindSageID(json))
+    dir.art=GetBackground(FindSageID(json))
 
     if len(dir)<1:
         return ObjectContainer(header='No Data for View', message='Unable to load the view ' + title)
@@ -226,19 +243,22 @@ def ProcessAirings(title, viewName, path, json):
     dir = ObjectContainer(title2=title, view_group='InfoList')
 
     if 'children' in json:
+        if 'title' in json:
+            dir.title1 = json['title']
+
         for video in json['children']:
             if 'children' in video:
-                sageid = sagex.FindSageID(video)
+                sageid = FindSageID(video)
                 if FOLDERS_COUNT_IN_TITLE:
                     folderTitle = video['title'] + " (" + str(len(video['children'])) + " Airing Items)"
                 else:
                     folderTitle = video['title']
 
-                airing = sagex.FindFirstChild(video)
-                thumb = sagex.GetFanartFor(mediafile=airing, artifact='poster', mediatype='tv')
+                airing = FindFirstChild(video)
+                thumb = GetFanartFor(mediafile=airing, artifact='poster', mediatype='tv')
 
                 dir.add(
-                    DirectoryObject(key=Callback(ProcessChildren, title=title, viewName=viewName, path=sagex.AppendPath(path, video['title'])),
+                    DirectoryObject(key=Callback(ProcessChildren, title=title, viewName=viewName, path=AppendPath(path, video['title'])),
                                     title=folderTitle,
                                     thumb=thumb
                                     )
@@ -246,7 +266,7 @@ def ProcessAirings(title, viewName, path, json):
             else:
                 dir.add(PhoenixObject(video))
 
-    dir.art=sagex.GetBackground(sagex.FindSageID(json))
+    dir.art=GetBackground(FindSageID(json))
 
     if len(dir)<1:
         return ObjectContainer(header='No Data for View', message='Unable to load the view ' + title)
@@ -254,64 +274,5 @@ def ProcessAirings(title, viewName, path, json):
     return dir
 
 
-def PhoenixObject(media):
-    if sagex.IsAirings(media):
-        return NewPhoenixAiringObject(media)
-    else:
-        return NewPhoenixMediaObject(media)
-
-
-def NewPhoenixAiringObject(media):
-    o = EpisodeObject()
-    aired = Datetime.FromTimestamp((sagex.jsonval(media, "airingTime")) / 1000)
-    o.title = sagex.jsonval(media, 'title') + " - " + sagex.jsonval(media, 'episodeName') + " - " + aired.strftime("%a %I:%M %p")
-    o.show = sagex.jsonval(media, 'title')
-    o.season = sagex.jsonval(media, 'season')
-    o.index = sagex.jsonval(media, 'episode')
-    desc = aired.strftime("%a, %b %d at %I:%M %p\n") + sagex.jsonval(media, 'description')
-    o.summary = desc
-    o.duration = sagex.jsonval(media, "runtime")
-    o.originally_available_at = aired
-    o.thumb = sagex.GetFanartFor(mediafile=media, artifact='poster', mediatype='tv')
-    o.url = sagex.GetAiringUrl(media)
-    return o
-
-
-def NewPhoenixMediaObject(media):
-    if 'isTV' in media:
-        isTV = media['isTV']
-    else:
-        isTV = False
-
-    if isTV:
-        o = EpisodeObject()
-        o.title = sagex.jsonval(media,'episodeName')
-        o.show = sagex.jsonval(media,'title')
-        o.season = sagex.jsonval(media,'season')
-        o.index = sagex.jsonval(media,'episode')
-        if o.season > 0:
-            o.title = ("%s (%sx%s)" % (sagex.jsonval(media, 'episodeName'), str(o.season), str(o.index)))
-        o.summary = sagex.jsonval(media,'description')
-    else:
-        o = VideoClipObject()
-        o.title = sagex.jsonval(media, 'title')
-        o.summary = sagex.jsonval(media,'description')
-        o.year = sagex.jsonval(media, 'year')
-        if o.year > 0:
-            o.title = "%s (%s)" % (sagex.jsonval(media, 'title'), str(o.year))
-
-    if o.title is None:
-        Log(media)
-
-    o.url = sagex.GetStreamUrl(media)
-    o.thumb = sagex.GetThumb(media)
-    o.duration = sagex.jsonval(media, "runtime")
-
-    try:
-        o.originally_available_at = Datetime.FromTimestamp((sagex.jsonval(media, "airingTime")) / 1000)
-    except:
-        pass
-
-    return o
 
 
