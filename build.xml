@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <project basedir="." default="package" name="SageTVPlexChannel">
 
-    <property name="version" value="1.0.1-beta"/>
+    <property name="version" value="1.0.2-beta"/>
 
     <property name="target" value="${basedir}/target/"/>
     <property name="bundleName" value="SageTVPhoenix"/>
