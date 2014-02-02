@@ -22,7 +22,7 @@ NAME = L('Title')
 ART  = 'art-default.jpg'
 ICON = 'icon.png'
 
-VERSION="1.0.2-beta"
+VERSION="1.0.3-beta"
 
 DEFAULT_MENU = [
     {
@@ -83,7 +83,7 @@ FOLDERS_COUNT_IN_TITLE = True
 ####################################################################################################
 
 def Start():
-    Log("Starting Phoenix Plex Plugin")
+    Log("Starting Phoenix Plex Plugin: " + VERSION)
     Plugin.AddViewGroup('List', viewMode='List', mediaType='items')
     Plugin.AddViewGroup('InfoList', viewMode='InfoList', mediaType='items')
     Plugin.AddViewGroup('PanelStream', viewMode='PanelStream', mediaType='items')
@@ -144,7 +144,7 @@ def MainMenu():
 
 @route(VIDEO_PREFIX + '/about')
 def About():
-    return ObjectContainer(header='About Phoenix', message='Phoenix Plex Plugin Version ' + VERSION, title='About', thumb=R('info.png'))
+    return ObjectContainer(header='About Phoenix', message='Phoenix Plex Plugin Version ' + VERSION)
 
 
 def LoadMenuFromServer(menuname='userdata/Phoenix/Menus/plexmenu.json'):
@@ -165,7 +165,7 @@ def LoadMenuFromServer(menuname='userdata/Phoenix/Menus/plexmenu.json'):
     return None
 
 
-@route(VIDEO_PREFIX + '/vfs/getview/{viewName}/{start}/{end}/', allow_sync=True)
+@route(VIDEO_PREFIX + '/vfs/getview', allow_sync=True)
 def GetView(viewName, title, start=0, end=-1):
     try:
         videos = PhoenixAPI('phoenix.umb.CreateView', [viewName], start, end)
@@ -187,7 +187,7 @@ def GetView(viewName, title, start=0, end=-1):
     dir = ProcessChildren(title, viewName, path=Dict[viewName]['title'])
 
     if dir is None or len(dir) < 1:
-        return ObjectContainer(header='No Media', message='No media items for view ' + viewName)
+        return ObjectContainer(header='No Media', message='Empty View ' + viewName)
 
     return dir
 
