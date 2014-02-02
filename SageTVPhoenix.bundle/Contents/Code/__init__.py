@@ -27,7 +27,7 @@ VERSION="1.0.3-beta"
 DEFAULT_MENU = [
     {
         'title':'TV Shows',
-        'view':'phoenix.view.default.TV',
+        'view':'phoenix.view.default.allTV',
         'items': 100
     },
     {
