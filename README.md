@@ -22,6 +22,9 @@ You should see a new channel for Phoenix.  You will want to launch the channel, 
 # Requirements
 Latest Phoenix Core plugin and the Latest Sagex API plugin (7.1.9.23 minimum)
 
+# Don't like the Menu Items... Change them...
+https://github.com/stuckless/sagetv-phoenix-plex-channel/wiki/Cutomizing-the-Main-Menu
+
 # Gallery
 https://plus.google.com/photos/101598841452026913121/albums/5970615206594113041
 
